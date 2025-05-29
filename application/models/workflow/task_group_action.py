@@ -28,26 +28,73 @@ class TasksGroupAction:
     """
     Function use to get all task group action
     """
-    def get_task_group_action(self, task_id):
-        """
-        Retrieve a task group action for task.
-        """
-        if not task_id:
-            return {"error": "Task ID is required.", "success": False}
-
+    def get_all_task_group_actions(self):
         try:
-
-            result = self.db_connection.select(table_name='`task_group_action`',
-                                               condition='task_id = %s',
-                                               bind_variables=(task_id,))
+            query = "SELECT * FROM `task_group_action`"
+            result = self.db_connection.select(query=query)
             if not result:
                 return {"data": None, "success": False}
-
             return {"data": result, "success": True}
         except Exception as e:
-            General.write_event(f"Error retrieving task group workflow: {str(e)}")
-            return {"error": f"Error retrieving group workflow: {str(e)}", "success": True}
+            General.write_event(f"Error retrieving all task group actions: {str(e)}")
+            return {"error": f"Error retrieving all task group actions: {str(e)}", "success": False}
+        
+    def get_task_group_action(self, task_id):
+        """
+        Retrieve task group actions associated with a given task ID.
+        Returns joined data with group names.
+        """
+        # Validate task_id
+        if not isinstance(task_id, int) or task_id <= 0:
+            return {
+                "error": "Invalid task ID provided.",
+                "success": False
+            }
 
+        # Check if task_id is provided
+        if not task_id:
+            return {
+                "error": "Task ID is required.",
+                "success": False
+            }
+
+        try:
+            # Construct query to fetch task group actions with group name
+            query = """
+                SELECT tg.*, g.group_name 
+                FROM task_group_action tg
+                LEFT JOIN groups g ON g.group_id = tg.group_id
+                WHERE tg.task_id = %s
+            """
+
+            # Execute query
+            result = self.db_connection.select(
+                query=query,
+                bind_variables=(task_id,)
+            )
+
+            if not result:
+                return {
+                    "data": None,
+                    "message": f"No task group actions found for task_id {task_id}.",
+                    "success": False
+                }
+
+            return {
+                "data": result,
+                "success": True
+            }
+
+        except Exception as e:
+            # Log the error
+            General.write_event(f"Error retrieving task group actions: {str(e)}")
+
+            return {
+                "error": f"Error retrieving task group actions: {str(e)}",
+                "success": False
+            }
+
+    
     """
     function update to update task group action
     """

@@ -8,23 +8,16 @@ if os.path.exists(dotenv_path):
 
 
 class Config:
-    SECRET_KEY = "MIS-CODE-2023-%00249123211150%-Admin"
+    SECRET_KEY = "ZETTA-CODE-2025-%00249123211150%-BPMSERVESADMIN"
     TOKEN_HOURS = 1
-    MAX_TRY_LOGIN = 100
+    MAX_TRY_LOGIN = 5
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # MYSQL DB CONNECTION
-    MYSQL_DATABASE_USER = "root"
-    MYSQL_DATABASE_PASSWORD = "CodeSD.com25279"
+    MYSQL_DATABASE_USER = "code"
+    MYSQL_DATABASE_PASSWORD = "CodeSD.com"
     MYSQL_DATABASE_DB = "dynamic_workflows_db"
     MYSQL_DATABASE_HOST = "localhost"
     MYSQL_DATABASE_PORT = "3306"
-    # AUTH_API = "http://127.0.0.1:5002/api/hr/officers/search/structure"
-
-    # ORACLE DB CONFIGRATION
-    # ORACLE_DATABASE_USERNAME = "hrsys"
-    # ORACLE_DATABASE_PASSWORD = "hrsys"
-    # ORACLE_DATABASE_DSN = "localhost:1521/orcl"
-
 
 
 class DevelopmentConfig(Config):
