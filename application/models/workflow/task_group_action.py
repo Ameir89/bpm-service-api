@@ -63,12 +63,12 @@ class TasksGroupAction:
             query = """
                 SELECT tg.*, g.group_name 
                 FROM task_group_action tg
-                LEFT JOIN groups g ON g.group_id = tg.group_id
+                LEFT JOIN `groups` g ON g.group_id = tg.group_id
                 WHERE tg.task_id = %s
             """
 
             # Execute query
-            result = self.db_connection.select(
+            result = self.db_connection._execute_query(
                 query=query,
                 bind_variables=(task_id,)
             )

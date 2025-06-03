@@ -61,8 +61,13 @@ def create_task_group_action(current_user, task_id):
             {"group_id": item["group_id"], "action": item["action"], "level": item["level"]}
             for item in data
         ]
-
-        return jsonify(response_data), 201
+        
+        return jsonify({
+            'message': 'Task group action added successfully',
+            'data': response_data,
+            'success': True
+        }), 200
+        
 
     except Exception as e:
         return jsonify({

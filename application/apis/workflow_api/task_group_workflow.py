@@ -5,67 +5,73 @@ from flask import request, jsonify, abort
 from ...models.workflow.task_group_workflow import TasksGroupWorkflow
 
 """create task group workflow API."""
-@workflow_api_blueprint.route('/api/workflows/task_group_workflow', methods=['POST'])
+@workflow_api_blueprint.route('/api/workflows/task_group_workflow/<int:task_id>', methods=['POST'])
 @token_required
-def create_task_group_workflow(current_user):
+def create_task_group_workflow(current_user,task_id):
     try:
+        # 
         req = request.get_json(force=True)
-        req_validation = General.request_validation(json_data=req, keys=[
-            ["task_id", "required", None],
-            ["from_group", "required", None],
-            ["to_group", "required", None],
-            ["assign_task", "required", None],
-        ])
 
-        if req_validation is not None:
+        # Expecting a list of objects
+        if not isinstance(req, list):
             return jsonify({
-                'message': 'Request parameter error',
-                'data': req_validation,
+                'message': 'Invalid data format: expected a list of objects.',
                 'success': False
             }), 400
 
-        task_ids = req['task_id']
-        from_groups = req['from_group']
-        to_groups = req['to_group']
-        assign_task = req['assign_task']
-
-        if not (len(from_groups) == len(to_groups) == len(assign_task)):
-            return jsonify({
-                'message': 'Length mismatch between  from_group, and to_group or assign_task arrays.',
-                'success': False
-            }), 400
-
-        # Build list of dicts to be inserted
         data = []
-        for i in range(len(from_groups)):
+        for item in req:
+            # Validate required fieldsass
+            if not all(k in item for k in ("from_group", "to_group", "assign_task")):
+                return jsonify({
+                    'message': 'Missing required fields in some items.',
+                    'success': False
+                }), 400
+            
             data.append({
-                "task_id": task_ids,
-                "from_group": from_groups[i],
-                "to_group": to_groups[i],
-                "assign_task": assign_task[i]
+                "task_id": task_id,
+                "from_group": item["from_group"],
+                "to_group": item["to_group"],
+                "assign_task": item["assign_task"]
             })
 
         workflow = TasksGroupWorkflow()
-        result = workflow.create_task_group_workflow(data)
 
-        if isinstance(result, dict) and 'error' in result:
+        try:
+            result = workflow.create_task_group_workflow(data)
+        except Exception as db_error:
+            # Catch unexpected errors inside the function
             return jsonify({
-                'message': 'Failed to create workflow',
-                'error': result['error'],
+                'message': 'Error while creating task group workflows.',
+                'error': str(db_error),
                 'success': False
             }), 500
 
+         # Expecting: {'inserted_ids': 2, 'success': True}
+        if not (isinstance(result, dict) and result.get("success") is True):
+            return jsonify({
+                'message': 'Unexpected response from create task group workflow.',
+                'error': str(result),
+                'success': False
+            }), 500
+
+        # Format response output
+        response_data = [
+            {"from_group": item["from_group"], "to_group": item["to_group"], "assign_task": item["assign_task"]}
+            for item in data
+        ]
+        
         return jsonify({
-            'message': 'task group workflow created successfully',
-            'data': result,
+            'message': 'Task group workflow added successfully',
+            'data': response_data,
             'success': True
-        }), 201
+        }), 200
+        
 
     except Exception as e:
         return jsonify({
             "error": "An internal server error occurred",
             "message": str(e),
-            "data": None,
             "success": False
         }), 500
 
