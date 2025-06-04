@@ -55,6 +55,57 @@ class TasksGroupWorkflow:
         """
         Retrieve a workflow's tasks for templates.
         """
+        # Validate task_id
+        if not isinstance(task_id, int) or task_id <= 0:
+            return {
+                "error": "Invalid task ID provided.",
+                "success": False
+            }
+
+        # Check if task_id is provided
+        if not task_id:
+            return {
+                "error": "Task ID is required.",
+                "success": False
+            }
+
+        try:
+            # Construct query to fetch task group actions with group name
+            query = """
+                SELECT tw.*, fg.group_name as from_group_name,tg.group_name as to_group_name
+                FROM task_group_workflow tw
+                LEFT JOIN `groups` fg ON fg.group_id = tw.from_group
+                LEFT JOIN `groups` tg ON tg.group_id = tw.to_group
+                WHERE tw.task_id = %s
+            """
+
+            # Execute query
+            result = self.db_connection._execute_query(
+                query=query,
+                bind_variables=(task_id,)
+            )
+
+            if not result:
+                return {
+                    "data": None,
+                    "message": f"No task group actions found for task_id {task_id}.",
+                    "success": False
+                }
+
+            return {
+                "data": result,
+                "success": True
+            }
+
+        except Exception as e:
+            # Log the error
+            General.write_event(f"Error retrieving task group actions: {str(e)}")
+
+            return {
+                "error": f"Error retrieving task group actions: {str(e)}",
+                "success": False
+            }
+        
         if not task_id:
             return {"error": "Task ID is required.", "success": False}
 
