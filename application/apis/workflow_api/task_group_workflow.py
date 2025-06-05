@@ -77,53 +77,128 @@ def create_task_group_workflow(current_user,task_id):
 
 
 """update workflow API."""
-@workflow_api_blueprint.route('/api/workflows/task_group_workflow/<int:record_id>', methods=['PUT'])
+@workflow_api_blueprint.route('/api/workflows/task_group_workflow/<int:task_id>', methods=['PUT'])
 @token_required
-def update_task_group_workflow(current_user, record_id):
+def update_task_group_workflow(current_user, task_id):
     try:
-        req = request.get_json(force=True)
-        req_validation = General.request_validation(json_data=req, keys=[
-            ["task_id", "required", None],
-            ["from_group", "required", None],
-            ["to_group", "required", None],
-            ["assign_task", "required", None]
-        ])
+        req_data = request.get_json(force=True)
 
-        if req_validation is not None:
+        if not isinstance(req_data, list):
             return jsonify({
-                'message': 'Request parameter error',
-                'data': req_validation,
+                'message': 'Invalid data format: expected a list of objects.',
                 'success': False
             }), 400
 
-        task_id = req['task_id']
-        from_group = req['from_group']
-        to_group = req['to_group']
-        assign_task = req['assign_task']
-
         workflow = TasksGroupWorkflow()
-        result = workflow.update_task_group_workflow(record_id, task_id, from_group, to_group, assign_task)
 
-        if isinstance(result, dict) and 'error' in result:
+        # 1. حذف الإجراءات الحالية المرتبطة بالمهمة
+        result_data = workflow.get_task_group_workflow(task_id)
+        # print(f"Get task group action result: {result_data}")
+        General.write_event(f"Get task group action result: {result_data}", "INFO")
+
+        existing_actions = result_data.get('data') if isinstance(result_data, dict) else []
+
+        if isinstance(existing_actions, list):
+            for item in existing_actions:
+                item_id = item.get("id")
+                if item_id:
+                    delete_result = workflow.delete_task_group_workflow(item_id)
+                    if delete_result.get("success") is not True:
+                        General.write_event(f"Failed to delete item {item_id}: {delete_result.get('error')}")
+        else:
+            General.write_event("No valid list of existing workflow found.", "INFO")
+
+        # 2. التحقق من صحة البيانات الجديدة
+        new_workflows = []
+        for item in req_data:
+            if not all(k in item for k in ("from_group", "to_group", "assign_task")):
+                return jsonify({
+                    'message': 'Missing required fields in some items. Required: group_id, action, level',
+                    'success': False
+                }), 400
+
+            new_workflows.append({
+                "task_id": task_id,
+                "from_group": item["from_group"],
+                "to_group": item["to_group"],
+                "assign_task": item["assign_task"]
+            })
+
+        # 3. إدخال البيانات الجديدة
+        try:
+            result = workflow.create_task_group_workflow(new_workflows)
+        except Exception as db_error:
+            General.write_event(f"Exception during creation: {str(db_error)}")
             return jsonify({
-                'message': 'Failed to update group',
-                'error': result['error'],
+                'message': 'Error while creating task group actions.',
+                'error': str(db_error),
+                'success': False
+            }), 500
+
+        if isinstance(result, dict) and result.get('success') is not True:
+            return jsonify({
+                'message': 'Failed to create task group actions',
+                'error': result.get('error'),
                 'success': False
             }), 500
 
         return jsonify({
-            'message': 'Group updated successfully',
+            'message': 'Task group action updated successfully',
             'data': result,
             'success': True
         }), 200
 
     except Exception as e:
+        General.write_event(f"Unexpected error in update task group workflow: {str(e)}")
         return jsonify({
             "error": "An internal server error occurred",
             "message": str(e),
             "data": None,
             "success": False
         }), 500
+    #     req = request.get_json(force=True)
+    #     req_validation = General.request_validation(json_data=req, keys=[
+    #         ["task_id", "required", None],
+    #         ["from_group", "required", None],
+    #         ["to_group", "required", None],
+    #         ["assign_task", "required", None]
+    #     ])
+    #
+    #     if req_validation is not None:
+    #         return jsonify({
+    #             'message': 'Request parameter error',
+    #             'data': req_validation,
+    #             'success': False
+    #         }), 400
+    #
+    #     task_id = req['task_id']
+    #     from_group = req['from_group']
+    #     to_group = req['to_group']
+    #     assign_task = req['assign_task']
+    #
+    #     workflow = TasksGroupWorkflow()
+    #     result = workflow.update_task_group_workflow(record_id, task_id, from_group, to_group, assign_task)
+    #
+    #     if isinstance(result, dict) and 'error' in result:
+    #         return jsonify({
+    #             'message': 'Failed to update group',
+    #             'error': result['error'],
+    #             'success': False
+    #         }), 500
+    #
+    #     return jsonify({
+    #         'message': 'Group updated successfully',
+    #         'data': result,
+    #         'success': True
+    #     }), 200
+    #
+    # except Exception as e:
+    #     return jsonify({
+    #         "error": "An internal server error occurred",
+    #         "message": str(e),
+    #         "data": None,
+    #         "success": False
+    #     }), 500
 
 
 """get task group workflow by id API."""

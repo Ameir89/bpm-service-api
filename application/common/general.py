@@ -55,21 +55,42 @@ class General:
         return value if value and str(value).strip() else None
 
     # --------------- Logging Methods ----------------
+    # @staticmethod
+    # def write_event(message, level="ERROR"):
+    #     """Log events to a file with timestamp."""
+    #     time_date = datetime.now()
+    #     date = time_date.strftime("%Y-%m-%d")
+    #     log_dir = "D:\\log" if platform.startswith("win") else "/var/log/tana"
+
+    #     if not os.path.exists(log_dir):
+    #         os.makedirs(log_dir)
+
+    #     file_path = os.path.join(log_dir, f"bpm-service-{date}.log")
+    #     log_message = f'{time_date} -- {level} -- {message}\n'
+
+    #     with open(file_path, 'a') as log_file:
+    #         log_file.write(log_message)
+    
     @staticmethod
     def write_event(message, level="ERROR"):
-        """Log events to a file with timestamp."""
         time_date = datetime.now()
-        date = time_date.strftime("%Y-%m-%d")
-        log_dir = "D:\\log" if platform.startswith("win") else "/var/log/tana"
+        date = time_date.day
+        file_name = None
+        if platform == "linux" or platform == "linux2":
+            file_name = f'/var/log/code/bpm-service-{date}.log'
+        elif platform == "win32":
+            file_name = f'D:\\log\\bpm-service-{date}.log'
+        elif platform == "win64":
+            file_name = f'D:\\log\\bpm-service-{date}.log'
 
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
+        handle = open(file_name, 'a')
+        if handle is None:
+            handle = open(file_name, 'w')
 
-        file_path = os.path.join(log_dir, f"bpm-service-{date}.log")
-        log_message = f'{time_date} -- {level} -- {message}\n'
+        data = f'{time_date} -- {level}-- {message} --\n '
 
-        with open(file_path, 'a') as log_file:
-            log_file.write(log_message)
+        handle.write(data)
+        handle.close()
 
     # --------------- Request Validation ----------------
     @staticmethod
